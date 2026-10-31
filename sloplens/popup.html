@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      width: 320px; margin: 0; padding: 14px 16px 16px;
+      font: 13px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+    }
+    h1 { margin: 0 0 2px; font-size: 14px; font-weight: 600; }
+    .sub { margin: 0 0 12px; opacity: .55; font-size: 11.5px; }
+    .row { margin-bottom: 12px; }
+    .row > label { display: block; margin-bottom: 5px; opacity: .65; font-size: 11.5px; }
+    .seg { display: flex; gap: 6px; }
+    .seg button {
+      flex: 1; font: inherit; font-size: 12px; padding: 4px 0;
+      border-radius: 7px; cursor: pointer;
+      border: 1px solid rgba(128,128,128,.35); background: transparent; color: inherit;
+      opacity: .7;
+    }
+    .seg button:hover { opacity: 1; }
+    .seg button[aria-pressed="true"] {
+      border-color: rgba(224,83,61,.6); background: rgba(224,83,61,.12); opacity: 1;
+    }
+    .stats { display: flex; gap: 6px; margin: 0 0 12px; }
+    .stat {
+      flex: 1; min-width: 0; padding: 6px 7px; border-radius: 8px;
+      border: 1px solid rgba(128,128,128,.25); background: rgba(128,128,128,.07);
+    }
+    .stat b { display: block; font-size: 15px; font-weight: 600; font-variant-numeric: tabular-nums; }
+    .stat span { font-size: 10.5px; opacity: .6; white-space: nowrap; }
+    .export {
+      width: 100%; font: inherit; font-size: 12.5px; padding: 7px 0;
+      border-radius: 8px; cursor: pointer;
+      border: 1px solid rgba(128,128,128,.4); background: transparent; color: inherit;
+    }
+    .export:hover { background: rgba(128,128,128,.1); }
+    .hint { margin: 10px 0 0; font-size: 11px; opacity: .5; line-height: 1.5; }
+
+    /* 深检 */
+    details.llm {
+      margin-top: 14px; padding-top: 12px;
+      border-top: 1px solid rgba(128,128,128,.25);
+    }
+    details.llm > summary {
+      cursor: pointer; font-size: 12.5px; opacity: .8; list-style: none;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    details.llm > summary::after { content: "▾"; opacity: .5; }
+    details.llm[open] > summary::after { content: "▴"; }
+    details.llm > summary::-webkit-details-marker { display: none; }
+    .field { margin: 10px 0 0; }
+    .field label { display: block; margin-bottom: 4px; font-size: 11px; opacity: .6; }
+    .field input[type="text"], .field input[type="password"], .field input[type="number"] {
+      width: 100%; box-sizing: border-box; font: inherit; font-size: 12px;
+      padding: 5px 8px; border-radius: 7px;
+      border: 1px solid rgba(128,128,128,.35); background: rgba(128,128,128,.06); color: inherit;
+    }
+    .field input:focus { outline: 1px solid rgba(224,83,61,.5); }
+    .inline { display: flex; align-items: center; gap: 7px; font-size: 12.5px; }
+    .btns { display: flex; gap: 6px; margin-top: 10px; }
+    .btns button {
+      flex: 1; font: inherit; font-size: 12px; padding: 6px 0;
+      border-radius: 7px; cursor: pointer;
+      border: 1px solid rgba(128,128,128,.4); background: transparent; color: inherit;
+    }
+    .btns button:hover { background: rgba(128,128,128,.1); }
+    .btns button.primary { border-color: rgba(224,83,61,.5); background: rgba(224,83,61,.1); }
+    .status { margin: 8px 0 0; font-size: 11.5px; min-height: 16px; opacity: .75; }
+    .status.err { color: #c2410c; opacity: 1; }
+    .warn { margin: 8px 0 0; font-size: 10.5px; opacity: .45; line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <h1>SlopLens</h1>
+  <p class="sub">本地打分 · 不发请求 · 不替你下判决 <span id="ver" style="opacity:.7"></span></p>
+
+  <div class="row">
+    <label>显示方式</label>
+    <div class="seg" id="mode">
+      <button type="button" data-v="badge">只标注</button>
+      <button type="button" data-v="fold">折叠空话</button>
+      <button type="button" data-v="off">关闭</button>
+    </div>
+  </div>
+
+  <div class="row">
+    <label>灵敏度</label>
+    <div class="seg" id="sens">
+      <button type="button" data-v="low">低</button>
+      <button type="button" data-v="mid">中</button>
+      <button type="button" data-v="hi">高</button>
+    </div>
+  </div>
+
+  <div class="row">
+    <label>角标位置</label>
+    <div class="seg" id="pos">
+      <button type="button" data-v="header">时间旁边</button>
+      <button type="button" data-v="below">正文下方</button>
+    </div>
+  </div>
+
+  <div class="row">
+    <label>低信息阈值（具体信息 ≤ 这个档才灰标）</label>
+    <div class="seg" id="lowspec">
+      <button type="button" data-v="strict">严 · 15</button>
+      <button type="button" data-v="mid">中 · 30</button>
+      <button type="button" data-v="loose">宽 · 45</button>
+    </div>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><b id="s-scanned">0</b><span>已扫描</span></div>
+    <div class="stat"><b id="s-marked">0</b><span>已标记</span></div>
+    <div class="stat"><b id="s-skipped">0</b><span>太短跳过</span></div>
+    <div class="stat"><b id="s-trunc">0</b><span>不完整</span></div>
+  </div>
+
+  <button type="button" class="export" id="export">导出反馈样本</button>
+  <button type="button" class="export" id="export-diag" style="margin-top:6px">导出诊断数据（含未标记）</button>
+  <button type="button" class="export" id="batch-judge" style="margin-top:6px">AI 预判本屏（用你的 key）</button>
+
+  <div class="row" style="margin-top:10px">
+    <div class="inline" style="margin-bottom:7px">
+      <input type="checkbox" id="lowq-on" />
+      <label for="lowq-on" style="margin:0;opacity:.85">标记低信息（没数字没细节的，灰标）</label>
+    </div>
+    <div class="inline" style="margin-bottom:7px">
+      <input type="checkbox" id="incompl-on" />
+      <label for="incompl-on" style="margin:0;opacity:.85">标记内容不完整（X 截断 / 作者只发半截）</label>
+    </div>
+    <div class="inline">
+      <input type="checkbox" id="diag-on" />
+      <label for="diag-on" style="margin:0;opacity:.85">诊断模式：显示没标记的「具体信息」值</label>
+    </div>
+  </div>
+
+  <p class="hint">
+    在推文角标上点开，选「这是 AI / 这是真人 / 说不清」。
+    「说不清」那几条最有价值，别硬判。
+  </p>
+
+  <details class="llm" id="llm-panel">
+    <summary>深检（可选 · 用自己的 key）</summary>
+
+    <div class="field">
+      <div class="inline">
+        <input type="checkbox" id="llm-enabled" />
+        <label for="llm-enabled" style="margin:0;opacity:.85">启用深检</label>
+      </div>
+    </div>
+
+    <div class="field">
+      <label for="llm-base">接口地址（OpenAI 兼容）</label>
+      <input type="text" id="llm-base" value="https://api.deepseek.com" />
+    </div>
+
+    <div class="field">
+      <label for="llm-model">模型</label>
+      <input type="text" id="llm-model" value="deepseek-flash" />
+    </div>
+
+    <div class="field">
+      <label for="llm-key">API Key</label>
+      <input type="password" id="llm-key" placeholder="sk-…" autocomplete="off" />
+    </div>
+
+    <div class="field">
+      <label for="llm-cap">每日调用上限</label>
+      <input type="number" id="llm-cap" min="1" max="5000" step="10" />
+    </div>
+
+    <div class="field">
+      <div class="inline">
+        <input type="checkbox" id="llm-fewshot" />
+        <label for="llm-fewshot" style="margin:0;opacity:.85">带上我标过的样本（few-shot）</label>
+      </div>
+      <p class="warn">
+        打开后，深检除了发这一条，还会把你标过的样本原文（最多 4 条 AI + 4 条真人）
+        一起发给上面那个地址。<b>只认你亲手点的标签</b>——采纳 AI 判断的那类不会用。
+        当前可用 <b id="llm-fewshot-n">0</b> 条。
+      </p>
+    </div>
+
+    <div class="btns">
+      <button type="button" class="primary" id="llm-save">保存</button>
+      <button type="button" id="llm-test">测试连接</button>
+    </div>
+
+    <p class="status" id="llm-status"></p>
+    <p class="warn">
+      key 明文存在这台电脑的浏览器里，不会上传到任何第三方；
+      只会发给你上面填的那个地址。今天已用 <b id="llm-used">0</b> 次。
+    </p>
+  </details>
+
+  <script src="llm.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

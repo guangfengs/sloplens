@@ -1,0 +1,13 @@
+# 本地真实数据：含个人 feed 内容与隐私，永不提交
+.local/
+
+# 内部交接文档：含本机绝对路径与旧会话 ID，不随公开仓库发布
+HANDOFF.md
+
+# macOS
+.DS_Store
+
+# 依赖与临时产物
+node_modules/
+*.log
+dist/

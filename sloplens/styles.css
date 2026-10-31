@@ -1,0 +1,217 @@
+/* SlopLens — 只在推文内部注入，尽量不干扰 X 自己的样式 */
+
+.sloplast-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 2px;
+  padding: 2px 8px 2px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(128, 128, 128, 0.28);
+  background: rgba(128, 128, 128, 0.10);
+  font-size: 12px;
+  line-height: 1.6;
+  color: inherit;
+  opacity: 0.78;
+  cursor: pointer;
+  user-select: none;
+  max-width: 100%;
+  transition: opacity 0.15s ease;
+}
+.sloplast-bar:hover { opacity: 1; }
+
+.sloplast-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.sloplast-bar[data-tier="high"] .sloplast-dot { background: #e0533d; }
+.sloplast-bar[data-tier="uncertain"] .sloplast-dot { background: #d9a13b; }
+/* 低信息：灰蓝，明显比「空话」「存疑」弱一档。它不是判决，只是「这条没什么料」 */
+.sloplast-bar[data-tier="low"] .sloplast-dot { background: #6b8fa8; }
+.sloplast-bar[data-tier="low"] {
+  border-style: dashed;
+  border-color: rgba(107, 143, 168, 0.45);
+  background: rgba(107, 143, 168, 0.07);
+  opacity: 0.6;
+}
+.sloplast-bar[data-tier="low"]:hover { opacity: 0.85; }
+
+/* 被截断的长推：纯记号，不可点，不显示分数 */
+.sloplast-bar--trunc {
+  cursor: default;
+  border-style: dotted;
+  border-color: rgba(128, 128, 128, 0.35);
+  background: transparent;
+  opacity: 0.45;
+  font-size: 11px;
+}
+.sloplast-bar--trunc:hover { opacity: 0.7; }
+.sloplast-bar--trunc .sloplast-dot {
+  background: transparent;
+  box-shadow: inset 0 0 0 1px rgba(128, 128, 128, 0.7);
+}
+
+.sloplast-bar[data-tier="high"] {
+  border-color: rgba(224, 83, 61, 0.35);
+  background: rgba(224, 83, 61, 0.08);
+}
+
+/* 诊断模式：未标记 / 跳过的推文也显示一个很淡的分数 */
+.sloplast-bar--diag {
+  opacity: 0.32;
+  border-style: dashed;
+  cursor: default;
+}
+.sloplast-bar--diag:hover { opacity: 0.55; }
+.sloplast-bar--diag .sloplast-dot { background: rgba(128, 128, 128, 0.7); }
+.sloplast-bar--diag[data-tier="skipped"] { border-style: dotted; }
+
+/* 放在时间戳旁边时：更小、更紧、不参与换行 */
+.sloplast-bar--inline {
+  margin: 0 0 0 4px;
+  padding: 0 6px 0 5px;
+  font-size: 11px;
+  line-height: 1.45;
+  gap: 4px;
+  flex: 0 0 auto;
+  align-self: center;
+  max-width: none;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.sloplast-bar--inline .sloplast-dot { width: 6px; height: 6px; }
+
+.sloplast-score {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.6;
+}
+
+.sloplast-panel {
+  margin: 4px 0 6px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(128, 128, 128, 0.25);
+  background: rgba(128, 128, 128, 0.07);
+  font-size: 12.5px;
+  line-height: 1.7;
+  color: inherit;
+}
+.sloplast-panel[hidden] { display: none; }
+
+.sloplast-head {
+  font-size: 11.5px;
+  opacity: 0.62;
+  margin-bottom: 6px;
+}
+
+.sloplast-reasons {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+.sloplast-reasons li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 1px 0;
+  opacity: 0.85;
+}
+.sloplast-reasons .w { opacity: 0.55; font-variant-numeric: tabular-nums; flex: 0 0 auto; }
+
+.sloplast-actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+.sloplast-actions button {
+  font: inherit;
+  font-size: 12px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(128, 128, 128, 0.35);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.sloplast-actions button:hover { opacity: 1; background: rgba(128, 128, 128, 0.12); }
+.sloplast-actions button[aria-pressed="true"] {
+  border-color: rgba(224, 83, 61, 0.6);
+  background: rgba(224, 83, 61, 0.12);
+  opacity: 1;
+}
+.sloplast-saved { opacity: 0.55; font-size: 11.5px; }
+
+/* 折叠态：只隐藏正文与媒体，保留作者和我们的条 */
+article.sloplast-folded [data-testid="tweetText"],
+article.sloplast-folded [data-testid="tweetPhoto"],
+article.sloplast-folded [data-testid="videoPlayer"],
+article.sloplast-folded [data-testid="card.wrapper"],
+article.sloplast-folded [data-testid="quoteTweet"] {
+  display: none !important;
+}
+
+/* 选中文字检测的浮层 */
+.sloplast-float {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 2147483646;
+  width: min(340px, calc(100vw - 40px));
+  padding: 12px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  background: #fff;
+  color: #111;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+  font: 13px/1.65 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  .sloplast-float { background: #1c1c1e; color: #eee; border-color: rgba(255, 255, 255, 0.16); }
+}
+.sloplast-float h4 { margin: 0 0 6px; font-size: 13px; font-weight: 600; }
+.sloplast-float .close {
+  position: absolute; top: 8px; right: 10px;
+  border: 0; background: transparent; color: inherit;
+  cursor: pointer; opacity: 0.5; font-size: 16px; line-height: 1;
+}
+.sloplast-float ul { margin: 6px 0 0; padding-left: 16px; opacity: 0.85; }
+
+/* 深检结果块 */
+.sloplast-deep {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(128, 128, 128, 0.3);
+  font-size: 12px;
+  opacity: 0.85;
+}
+.sloplast-deep .sloplast-reasons { margin-top: 4px; }
+
+/* AI 已有初判：用虚线边框区分，不改变原有档位配色 */
+.sloplast-bar[data-ai] { border-style: dashed; }
+.sloplast-bar[data-ai="ai"] { box-shadow: inset 0 0 0 1px rgba(224, 83, 61, 0.25); }
+.sloplast-bar[data-ai="human"] { box-shadow: inset 0 0 0 1px rgba(64, 160, 120, 0.25); }
+
+/* AI 预判结果块 */
+.sloplast-ai {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(128, 128, 128, 0.3);
+  font-size: 12px;
+}
+.sloplast-ai .sloplast-reasons { margin-top: 4px; }
+
+/* 批量预判的进度提示 */
+.sloplast-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 2147483647;
+  padding: 8px 16px;
+  border-radius: 999px;
+  background: rgba(20, 20, 22, 0.92);
+  color: #fff;
+  font: 12.5px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", sans-serif;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+  pointer-events: none;
+}
+.sloplast-toast[hidden] { display: none; }
